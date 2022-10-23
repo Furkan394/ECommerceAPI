@@ -13,6 +13,7 @@ using ECommerceAPI.Application.Repositories.Orders;
 using ECommerceAPI.Persistence.Repositories.Orders;
 using ECommerceAPI.Application.Repositories.Products;
 using ECommerceAPI.Persistence.Repositories.Products;
+using System.Reflection;
 
 namespace ECommerceAPI.Persistence
 {
@@ -23,12 +24,15 @@ namespace ECommerceAPI.Persistence
             services.AddDbContext<ECommerceAPIDbContext>(options =>
                                             options.UseNpgsql(configuration.GetConnectionString("PostgreSQL")));
 
-            services.AddScoped<ICustomerReadRepository, CustomerReadRepository>();
-            services.AddScoped<ICustomerWriteRepository, CustomerWriteRepository>();
-            services.AddScoped<IOrderReadRepository, OrderReadRepository>();
-            services.AddScoped<IOrderWriteRepository, OrderWriteRepository>();
-            services.AddScoped<IProductReadRepository, ProductReadRepository>();
-            services.AddScoped<IProductWriteRepository, ProductWriteRepository>();
+            Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(x => x.Name.EndsWith("Repository") && !x.IsAbstract && !x.IsInterface)
+            .Select(x => new { assignedType = x, serviceTypes = x.GetInterfaces().ToList() })
+            .ToList()
+            .ForEach(typesToRegister =>
+            {
+                typesToRegister.serviceTypes.ForEach(typeToRegister => services.AddScoped(typeToRegister, typesToRegister.assignedType));
+            });
         }
     }
 }
