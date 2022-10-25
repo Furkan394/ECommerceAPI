@@ -1,6 +1,9 @@
 ﻿using ECommerceAPI.Application.Repositories.Products;
+using ECommerceAPI.Application.ViewModels.Products;
+using ECommerceAPI.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace ECommerceAPI.API.Controllers
 {
@@ -20,15 +23,44 @@ namespace ECommerceAPI.API.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            await _productWriteRepository.AddRangeAsync(new()
+            return Ok(_productReadRepository.GetAll(false));
+        }
+
+        [HttpGet("{Id}")]
+        public async Task<IActionResult> Get(string id)
+        {
+            return Ok(await _productReadRepository.GetByIdAsync(id, false));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Add(VM_Create_Product model)
+        {
+            await _productWriteRepository.AddAsync(new()
             {
-                new() {Id = Guid.NewGuid(), Name = "Product 1", Price = 100, CreatedDate = DateTime.UtcNow, Stock = 10},
-                new() {Id = Guid.NewGuid(), Name = "Product 2", Price = 200, CreatedDate = DateTime.UtcNow, Stock = 20},
-                new() {Id = Guid.NewGuid(), Name = "Product 3", Price = 300, CreatedDate = DateTime.UtcNow, Stock = 30},
+                Name = model.Name,
+                Stock = model.Stock,
+                Price = model.Price
             });
+            await _productWriteRepository.SaveAsync();
+            return StatusCode((int)HttpStatusCode.Created);
+        }
 
-            _productWriteRepository.SaveAsync();
+        [HttpPut]
+        public async Task<IActionResult> Update(VM_Update_Product model)
+        {
+            Product product = await _productReadRepository.GetByIdAsync(model.Id);
+            product.Stock = model.Stock;
+            product.Name = model.Name;
+            product.Price = model.Price;
+            await _productWriteRepository.SaveAsync();
+            return Ok();
+        }
 
+        [HttpDelete("{Id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            await _productWriteRepository.RemoveAsync(id);
+            await _productWriteRepository.SaveAsync();
             return Ok();
         }
     }
